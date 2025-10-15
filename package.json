@@ -1,0 +1,37 @@
+{
+  "name": "angular-analyzer",
+  "version": "1.0.0",
+  "description": "Angular project analyzer tools",
+  "main": "index.js",
+  "scripts": {
+    "list-files": "ts-node src/list-files.ts",
+    "visualize-html": "ts-node src/visualize-html.ts",
+    "list-css-classes": "ts-node src/list-css-classes.ts",
+    "analyze-ts-imports": "ts-node src/analyze-ts-imports.ts",
+    "list-ts-functions": "ts-node src/list-ts-functions.ts",
+    "analyze-ts-role": "ts-node src/analyze-ts-role.ts",
+    "graph-ts-dependencies": "ts-node src/graph-ts-dependencies.ts",
+    "summarize-html": "ts-node src/summarize-html.ts",
+    "summarize-css": "ts-node src/summarize-css.ts",
+    "summarize-ts": "ts-node src/summarize-ts.ts"
+  },
+  "keywords": [
+    "angular",
+    "analyzer",
+    "typescript"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@typescript-eslint/parser": "^8.0.0",
+    "@typescript-eslint/typescript-estree": "^8.0.0",
+    "css-tree": "^3.0.0",
+    "node-html-parser": "^6.1.0",
+    "typescript": "^5.9.0"
+  },
+  "devDependencies": {
+    "@types/css-tree": "^2.3.11",
+    "@types/node": "^22.0.0",
+    "ts-node": "^10.9.0"
+  }
+}
