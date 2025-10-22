@@ -8,11 +8,14 @@
  * Options:
  *   --output <format>  Output format: json, md, html (default: json)
  *   --cache           Use cache for incremental analysis
+ *   --no-cache        Disable cache (default: cache enabled)
+ *   --clear-cache     Clear cache and exit
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
 import { parse as parseTs } from '@typescript-eslint/typescript-estree';
+import { CacheManager } from './utils/cache-manager';
 
 // ==================== Interfaces ====================
 
@@ -149,14 +152,31 @@ class ProjectAnalyzer {
   private components: ComponentAnalysis[] = [];
   private services: ServiceAnalysis[] = [];
   private warnings: Warning[] = [];
+  private cacheManager: CacheManager | null = null;
+  private useCache: boolean = true;
+  private cacheHits: number = 0;
+  private cacheMisses: number = 0;
 
-  constructor(projectPath: string) {
+  constructor(projectPath: string, useCache: boolean = true) {
     this.projectPath = projectPath;
     this.baseDir = projectPath;
+    this.useCache = useCache;
+
+    if (this.useCache) {
+      this.cacheManager = new CacheManager(projectPath);
+    }
   }
 
   async analyze(): Promise<ProjectAnalysis> {
     console.log(`Analyzing project: ${this.projectPath}\n`);
+
+    // キャッシュをロード
+    if (this.useCache && this.cacheManager) {
+      const loaded = this.cacheManager.load();
+      if (loaded) {
+        console.log('✓ Cache loaded\n');
+      }
+    }
 
     // ファイル収集
     const tsFiles = this.getAllTypeScriptFiles(this.projectPath);
@@ -166,7 +186,23 @@ class ProjectAnalyzer {
     let processed = 0;
     for (const file of tsFiles) {
       try {
-        const analysis = this.analyzeTypeScriptFile(file);
+        let analysis: FileAnalysis;
+
+        // キャッシュから取得を試みる
+        if (this.useCache && this.cacheManager) {
+          const cached = this.cacheManager.getCachedAnalysis(file);
+          if (cached) {
+            analysis = cached;
+            this.cacheHits++;
+          } else {
+            analysis = this.analyzeTypeScriptFile(file);
+            this.cacheManager.addToCache(file, analysis);
+            this.cacheMisses++;
+          }
+        } else {
+          analysis = this.analyzeTypeScriptFile(file);
+        }
+
         this.files.push(analysis);
 
         // 種別ごとに分類
@@ -191,7 +227,17 @@ class ProjectAnalyzer {
       }
     }
 
-    console.log(`✓ Analyzed ${this.files.length} files\n`);
+    console.log(`✓ Analyzed ${this.files.length} files`);
+
+    // キャッシュ統計を表示
+    if (this.useCache && this.cacheManager) {
+      console.log(`  Cache hits: ${this.cacheHits}, Cache misses: ${this.cacheMisses}`);
+      if (this.cacheHits > 0) {
+        const hitRate = ((this.cacheHits / tsFiles.length) * 100).toFixed(1);
+        console.log(`  Cache hit rate: ${hitRate}%`);
+      }
+    }
+    console.log('');
 
     // 依存関係グラフ構築
     const dependencies = this.buildDependencyGraph();
@@ -201,6 +247,20 @@ class ProjectAnalyzer {
 
     // サマリ作成
     const summary = this.createSummary();
+
+    // キャッシュを保存
+    if (this.useCache && this.cacheManager) {
+      const cacheFiles = new Map();
+      this.files.forEach(file => {
+        const fullPath = path.resolve(this.baseDir, file.path);
+        const cached = this.cacheManager!.getCachedAnalysis(fullPath);
+        if (cached || this.cacheMisses > 0) {
+          // 新規解析したファイルのみキャッシュに追加
+          this.cacheManager!.addToCache(fullPath, file);
+        }
+      });
+      this.cacheManager.save(this.projectPath, this.cacheManager['cache']?.files || new Map());
+    }
 
     return {
       summary,
@@ -660,28 +720,42 @@ Usage: npx ts-node src/analyze-project.ts <project-dir> [options]
 Options:
   --output <format>  Output format: json, md (default: json)
   --save <path>      Save output to file
+  --no-cache         Disable cache (default: cache enabled)
+  --clear-cache      Clear cache and exit
   --help             Show this help message
 
 Examples:
   npx ts-node src/analyze-project.ts ./my-project
   npx ts-node src/analyze-project.ts ./my-project --output md
   npx ts-node src/analyze-project.ts ./my-project --output json --save analysis.json
+  npx ts-node src/analyze-project.ts ./my-project --no-cache
+  npx ts-node src/analyze-project.ts ./my-project --clear-cache
 `);
     process.exit(0);
   }
 
   const projectPath = args[0];
-  const outputFormat = args.includes('--output') ? args[args.indexOf('--output') + 1] : 'json';
-  const savePath = args.includes('--save') ? args[args.indexOf('--save') + 1] : null;
 
   if (!fs.existsSync(projectPath)) {
     console.error(`Error: Project directory "${projectPath}" does not exist`);
     process.exit(1);
   }
 
+  // --clear-cache オプション
+  if (args.includes('--clear-cache')) {
+    const cacheManager = new CacheManager(projectPath);
+    cacheManager.clear();
+    console.log('✓ Cache cleared');
+    process.exit(0);
+  }
+
+  const outputFormat = args.includes('--output') ? args[args.indexOf('--output') + 1] : 'json';
+  const savePath = args.includes('--save') ? args[args.indexOf('--save') + 1] : null;
+  const useCache = !args.includes('--no-cache');
+
   const startTime = Date.now();
 
-  const analyzer = new ProjectAnalyzer(projectPath);
+  const analyzer = new ProjectAnalyzer(projectPath, useCache);
   const analysis = await analyzer.analyze();
 
   const endTime = Date.now();

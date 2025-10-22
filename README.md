@@ -46,6 +46,8 @@ npx ts-node src/analyze-project.ts <project-dir> [options]
 Options:
   --output <format>  Output format: json, md (default: json)
   --save <path>      Save output to file
+  --no-cache         Disable cache (default: cache enabled)
+  --clear-cache      Clear cache and exit
 ```
 
 **出力**: プロジェクトサマリ、ファイル解析、コンポーネント/サービス一覧、依存関係グラフ、メトリクス
@@ -54,6 +56,7 @@ Options:
 - 60-1000倍高速 (13ファイル: 10秒 → 0.01秒)
 - メモリ使用量90%削減
 - 大規模プロジェクト対応
+- **インクリメンタル解析**: 変更ファイルのみ再解析（2回目以降は数倍高速）
 
 **使用例**:
 ```bash
@@ -62,7 +65,19 @@ npx ts-node src/analyze-project.ts ./my-project --output md
 
 # JSONファイルに保存
 npx ts-node src/analyze-project.ts ./my-project --output json --save analysis.json
+
+# キャッシュなしで実行（初回または完全再解析時）
+npx ts-node src/analyze-project.ts ./my-project --no-cache
+
+# キャッシュをクリア
+npx ts-node src/analyze-project.ts ./my-project --clear-cache
 ```
+
+**キャッシュ機能**:
+- デフォルトでキャッシュが有効
+- `.cache/analysis-cache.json`にキャッシュを保存
+- ファイルのハッシュ値とタイムスタンプで変更を検出
+- 2回目以降の解析が大幅に高速化
 
 #### analyze-modules.ts - モジュール構造解析 🆕 **NEW**
 
@@ -109,6 +124,79 @@ Options:
 # Pre-commit hook
 npx ts-node src/detect-circular-deps.ts ./src || exit 1
 ```
+
+---
+
+---
+
+### Phase 3 - 実用性向上ツール
+
+#### analyze-template-usage.ts - テンプレート使用状況解析 🆕 **NEW**
+
+テンプレート内のコンポーネント/ディレクティブ/パイプ使用状況を解析します。
+
+```bash
+npx ts-node src/analyze-template-usage.ts <component-file> [options]
+
+Options:
+  --save <path>      Save output to file
+```
+
+**出力**: 使用コンポーネント、ディレクティブ、パイプ一覧、未使用インポート警告
+
+#### trace-service-usage.ts - サービス使用箇所追跡 🆕 **NEW**
+
+サービスがどこで注入・使用されているか追跡します。
+
+```bash
+npx ts-node src/trace-service-usage.ts <service-file> <project-dir> [options]
+
+Options:
+  --save <path>      Save output to file
+```
+
+**出力**: 注入箇所、メソッド使用状況、呼び出し回数
+
+#### detect-unused-code.ts - 未使用コード検出 🆕 **NEW**
+
+未使用のコンポーネント、サービス、パイプ、ディレクティブを検出します。
+
+```bash
+npx ts-node src/detect-unused-code.ts <project-dir> [options]
+
+Options:
+  --save <path>      Save output to file
+```
+
+**出力**: 未使用アイテム一覧（コンポーネント/サービス/パイプ/ディレクティブ/モジュール）
+
+#### analyze-rxjs.ts - RxJS解析 🆕 **NEW**
+
+RxJS使用状況とSubscription漏れを検出します。
+
+```bash
+npx ts-node src/analyze-rxjs.ts <project-dir> [options]
+
+Options:
+  --save <path>      Save output to file
+```
+
+**出力**: Observable/Subject一覧、オペレーター使用状況、潜在的なメモリリーク警告
+
+#### generate-report.ts - HTML統合レポート 🆕 **NEW**
+
+すべての解析結果をHTML形式で統合レポート化します。
+
+```bash
+npx ts-node src/generate-report.ts <project-dir> [options]
+
+Options:
+  --output <path>    Output HTML file (default: report.html)
+  --theme <theme>    Theme: light, dark (default: light)
+  --help             Show this help message
+```
+
+**出力**: インタラクティブなHTMLレポート（サマリ、問題点、メトリクス、グラフ）
 
 ---
 
