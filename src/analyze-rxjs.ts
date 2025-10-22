@@ -153,7 +153,6 @@ class RxJSAnalyzer {
       });
 
       let hasRxJSImport = false;
-      let currentClassName = '';
       let classHasNgOnDestroy = false;
       const subscriptionVariables = new Set<string>();
 
@@ -167,8 +166,6 @@ class RxJSAnalyzer {
 
         // クラス情報を追跡
         if (node.type === 'ClassDeclaration' && node.id) {
-          currentClassName = node.id.name;
-
           // ngOnDestroyの実装を確認
           if (node.implements) {
             node.implements.forEach((impl: any) => {
@@ -303,7 +300,7 @@ class RxJSAnalyzer {
   }
 
   private determineSubscriptionHandling(
-    node: any,
+    _node: any,
     content: string,
     line: number
   ): SubscriptionInfo['handlingType'] {

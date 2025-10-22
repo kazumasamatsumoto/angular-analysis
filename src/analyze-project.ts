@@ -250,7 +250,6 @@ class ProjectAnalyzer {
 
     // キャッシュを保存
     if (this.useCache && this.cacheManager) {
-      const cacheFiles = new Map();
       this.files.forEach(file => {
         const fullPath = path.resolve(this.baseDir, file.path);
         const cached = this.cacheManager!.getCachedAnalysis(fullPath);

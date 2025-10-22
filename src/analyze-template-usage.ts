@@ -300,8 +300,8 @@ class TemplateUsageAnalyzer {
   private findUnusedImports(
     imports: string[],
     components: ComponentUsage[],
-    directives: DirectiveUsage[],
-    pipes: PipeUsage[]
+    _directives: DirectiveUsage[],
+    _pipes: PipeUsage[]
   ): string[] {
     // 簡易版: インポート名がテンプレート内で使われているか確認
     // 実際にはもっと詳細な解析が必要
